@@ -12,7 +12,7 @@ from utils.general import non_max_suppression_kpt,strip_optimizer,xyxy2xywh
 from utils.plots import output_to_keypoint, plot_skeleton_kpts,colors,plot_one_box_kpt
 
 @torch.no_grad()
-def run(poseweights="yolov7-w6-pose.pt",source="football1.mp4",device='cpu',view_img=False,
+def run(poseweights="yolov7-w6-pose.pt",source="football1.mp4",device='cpu',view_img=Trueb,
         save_conf=False,line_thickness = 3,hide_labels=False, hide_conf=True):
 
     frame_count = 0  #count no of frames

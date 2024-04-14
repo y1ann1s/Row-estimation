@@ -1,0 +1,197 @@
+import cv2
+import torch
+import numpy as np
+import requests
+from urllib.parse import urlparse
+from pytube import YouTube
+from pathlib import Path
+import matplotlib.pyplot as plt
+from torchvision import transforms
+# Importing necessary utilities from a hypothetical utils module - adjust imports based on your project structure
+from utils.general import non_max_suppression_kpt, scale_coords, xyxy2xywh, strip_optimizer, check_img_size
+from utils.plots import plot_one_box_kpt, plot_skeleton_kpts, colors, output_to_keypoint
+from utils.datasets import letterbox
+from utils.torch_utils import select_device, time_synchronized
+from models.experimental import attempt_load
+from utilities import is_valid_url, get_content_type
+
+# Assuming utils.py and necessary model files are correctly set up in your project directory
+
+def download_youtube_video(url, download_folder="downloaded_videos"):
+    Path(download_folder).mkdir(parents=True, exist_ok=True)
+    yt = YouTube(url)
+    stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+    if not stream:
+        print("Suitable video stream not found.")
+        return None
+    video_path = stream.download(output_path=download_folder)
+    print(f"Video downloaded successfully: {video_path}")
+    return video_path
+
+def download_video_from_url(url, download_folder="downloaded_videos"):
+    if not is_valid_url(url):
+        print("The URL is not valid or secure.")
+        return None
+    content_type = get_content_type(url)
+    if content_type and "video" in content_type:
+        file_name = os.path.basename(urlparse(url).path)
+        file_path = os.path.join(download_folder, file_name)
+        try:
+            os.makedirs(download_folder, exist_ok=True)
+            with requests.get(url, stream=True) as r:
+                r.raise_for_status()
+                with open(file_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192): 
+                        f.write(chunk)
+            print(f"Video downloaded successfully: {file_path}")
+            return file_path
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to download the video: {e}")
+            return None
+    else:
+        print("The URL does not point to a video content.")
+        return None
+
+# Function to calculate the angle, as previously defined
+import math
+
+def calculate_angle(hip, knee, ankle):
+    a = math.sqrt((hip[0] - knee[0])**2 + (hip[1] - knee[1])**2)
+    b = math.sqrt((knee[0] - ankle[0])**2 + (knee[1] - ankle[1])**2)
+    c = math.sqrt((hip[0] - ankle[0])**2 + (hip[1] - ankle[1])**2)
+    angle_radians = math.acos((a**2 + b**2 - c**2) / (2 * a * b))
+    angle_degrees = math.degrees(angle_radians)
+    return angle_degrees
+
+# Assuming kpts is your keypoints array, with each keypoint having (x, y) or (x, y, confidence)
+# and is structured as a flat list
+steps = 2 # Assuming each keypoint includes a confidence value
+
+# Adjust indices for 0-based indexing
+right_hip_index = 8 * steps
+right_knee_index = 9 * steps
+right_ankle_index = 10 * steps
+
+
+
+@torch.no_grad()
+def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose.pt", device='cpu', view_img=False, target_fps=10, save_conf=False, line_thickness=3, hide_labels=False, hide_conf=True, output_dir="processed_videos"):
+    frame_count = 0
+    device = select_device(device)
+    half = device.type != 'cpu' 
+    model = attempt_load(poseweights, map_location=device).eval()
+    if half:
+        model.half()  # to FP16
+    stride = int(model.stride.max())  # model stride
+    imgsz = check_img_size(640, s=stride)  # check image size
+
+    # Get names and colors
+    names = model.module.names if hasattr(model, 'module') else model.names
+    # to delete ///  colors = [[np.random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
+
+    cap = cv2.VideoCapture(source)
+    if not cap.isOpened():
+        print('Error while trying to read video. Please check path again')
+        return
+    
+    source_fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_skip_interval = int(np.round(source_fps / target_fps))
+    batch_size = 4  # Define your batch size based on your model and hardware capacity
+    frames_batch = []
+    frame_indices = []
+
+    frame_width, frame_height = int(cap.get(3)), int(cap.get(4))
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_video_path = Path(output_dir) / f"{Path(source).stem}_keypoint.mp4"
+    #out = cv2.VideoWriter(str(output_video_path), cv2.VideoWriter_fourcc(*'mp4v'), 30, (frame_width, frame_height))
+
+        
+    vid_write_image = letterbox(cap.read()[1], (frame_width), stride=64, auto=True)[0] #init videowriter
+    resize_height, resize_width = vid_write_image.shape[:2]
+    out_video_name = f"{source.split('/')[-1].split('.')[0]}"
+    out = cv2.VideoWriter(str(output_video_path),
+                            cv2.VideoWriter_fourcc(*'mp4v'), target_fps,
+                            (resize_width, resize_height))
+
+    while cap.isOpened():
+     ret, frame = cap.read()
+     if not ret:
+        break
+     frame_count = int(cap.get(cv2.CAP_PROP_POS_FRAMES))  # Current frame position
+     if frame_count % frame_skip_interval == 0:
+        
+
+        orig_image = frame #store frame
+        image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB) #convert frame to RGB
+        image = letterbox(image, (frame_width), stride=64, auto=True)[0]
+        image_ = image.copy()
+        image = transforms.ToTensor()(image)
+        image = torch.tensor(np.array([image.numpy()]))
+            
+        image = image.to(device)  #convert image data to device
+        image = image.float() #convert image to float precision (cpu)
+        #start_time = time.time() #start time for fps calculation
+            
+        with torch.no_grad():  #get predictions
+         output_data, _ = model(image)
+
+        output_data = non_max_suppression_kpt(output_data,   #Apply non max suppression
+                                    0.25,   # Conf. Threshold.
+                                    0.65, # IoU Threshold.
+                                    nc=model.yaml['nc'], # Number of classes.
+                                    nkpt=model.yaml['nkpt'], # Number of keypoints.
+                                    kpt_label=True)
+        
+        output = output_to_keypoint(output_data)
+
+        im0 = image[0].permute(1, 2, 0) * 255 # Change format [b, c, h, w] to [h, w, c] for displaying the image.
+        im0 = im0.cpu().numpy().astype(np.uint8)
+        
+        im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2BGR) #reshape image format to (BGR)
+        gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+
+        for i, pose in enumerate(output_data):  # detections per image
+        
+            if len(output_data):  #check if no pose
+                for c in pose[:, 5].unique(): # Print results
+                    n = (pose[:, 5] == c).sum()  # detections per class
+                    print("No of Objects in Current Frame {} : {}".format(frame_count,n))
+                
+                for det_index, (*xyxy, conf, cls) in enumerate(reversed(pose[:,:6])): #loop over poses for drawing on frameb
+                    c = int(cls)  # integer class
+                    kpts = pose[det_index, 6:]
+                    label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
+                    plot_one_box_kpt(xyxy, im0, label=label, color=colors(c, True), 
+                                line_thickness= line_thickness,kpt_label=True, kpts=kpts, steps=3, 
+                                orig_shape=im0.shape[:2])
+                    # Extract (x, y) coordinates
+                    right_hip = (kpts[right_hip_index], kpts[right_hip_index + 1])
+                    right_knee = (kpts[right_knee_index], kpts[right_knee_index + 1])
+                    right_ankle = (kpts[right_ankle_index], kpts[right_ankle_index + 1])
+
+                    # Calculate the angle at the right knee
+                    angle_right_knee = calculate_angle(right_hip, right_knee, right_ankle)
+                    print("The angle at the right knee is:", angle_right_knee, "degrees")
+
+
+        if view_img:
+            cv2.imshow('Processed Frame', im0)
+            if cv2.waitKey(1) == ord('q'):
+                break
+
+        out.write(im0)  # Write processed frame
+
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+
+
+
+
+
+# Placeholder for additional utility functions as needed based on the provided logic
+# Implement or import these as necessary for your project
+
+if __name__ == "__main__":
+    # Example usage
+    process_video_analysis(source="test2.mp4", poseweights="yolov7-w6-pose.pt", device='cpu', view_img=True)
