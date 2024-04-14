@@ -22,3 +22,5 @@ utils/__pycache__/metrics.cpython-311.pyc
 utils/__pycache__/plots.cpython-311.pyc
 utils/__pycache__/torch_utils.cpython-311.pyc
 secrets.txt
+.venv/Scripts/python.exe
+.venv/Scripts/pythonw.exe

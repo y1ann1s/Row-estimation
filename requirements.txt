@@ -31,3 +31,5 @@ thop  # FLOPs computation
 #telegram
 python-telegram-bot
 openai
+Flask>=2.0.1
+
