@@ -29,5 +29,5 @@ thop  # FLOPs computation
 
 # telegram
 #telegram
-telegram-bot
+python-telegram-bot
 openai
