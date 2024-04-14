@@ -28,6 +28,6 @@ psutil  # system utilization
 thop  # FLOPs computation
 
 # telegram
-telegram
-telegram-bot
+#telegram
+python-telegram-bot
 openai
