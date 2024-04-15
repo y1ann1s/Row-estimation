@@ -15,7 +15,8 @@ executor = ThreadPoolExecutor(max_workers=4)
 async def process_video_and_respond(path, update, context):
     loop = asyncio.get_running_loop()
     try:
-        result, video_path = await loop.run_in_executor(executor, process_video_analysis, path)
+        result = "Success"
+        video_path = await loop.run_in_executor(executor, process_video_analysis, path)
         await update.message.reply_text(f"Analysis Complete: {result}")
         await context.bot.send_video(chat_id=update.effective_chat.id, video=open(video_path, 'rb'))
     except Exception as e:
