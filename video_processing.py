@@ -59,8 +59,10 @@ def download_video_from_url(url, download_folder="downloaded_videos"):
 
 @torch.no_grad()
 def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose.pt", device='cpu', view_img=False, target_fps=1, save_conf=False, line_thickness=3, hide_labels=False, hide_conf=True, output_dir="processed_videos"):
-    device = select_device(device)
+    #device = select_device(device)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     half = device.type != 'cpu'
+    half=False
     model = attempt_load(poseweights, map_location=device).eval()
     if half:
         model.half()  # To FP16
@@ -78,8 +80,9 @@ def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     output_video_path = Path(output_dir) / f"{Path(source).stem}_keypoint.mp4"
     vid_write_image = letterbox(cap.read()[1], stride=64, auto=True)[0]  # Init VideoWriter
-    resize_height, resize_width = vid_write_image.shape[:2]
-    out = cv2.VideoWriter(str(output_video_path), cv2.VideoWriter_fourcc(*'mp4v'), target_fps, (resize_width, resize_height))
+    resize_height, resize_width = vid_write_image.shape [:2]
+    # need to fix the size out the output cideo writer
+    out = cv2.VideoWriter(str(output_video_path), cv2.VideoWriter_fourcc(*'mp4v'), target_fps, (resize_width*2, resize_height*2))
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -92,12 +95,14 @@ def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose
                 cv2.imshow('Processed Frame', processed_frame)
                 if cv2.waitKey(1) == ord('q'):
                     break
+#            print("Processed frame type:", type(processed_frame))
+#            print("Processed frame shape:", processed_frame.shape if processed_frame is not None else "None")
             out.write(processed_frame)  # Write processed frame
     
 
     cap.release()
     out.release()
-    cv2.destroyAllWindows()
+#    cv2.destroyAllWindows()
     
     return output_video_path
 

@@ -24,3 +24,27 @@ utils/__pycache__/torch_utils.cpython-311.pyc
 secrets.txt
 .venv/Scripts/python.exe
 .venv/Scripts/pythonw.exe
+__pycache__/bot_handlers.cpython-310.pyc
+__pycache__/config.cpython-310.pyc
+__pycache__/flask_app.cpython-310.pyc
+__pycache__/frame_processor.cpython-310.pyc
+__pycache__/openai_chat.cpython-310.pyc
+__pycache__/utilities.cpython-310.pyc
+__pycache__/video_processing.cpython-310.pyc
+downloaded_videos/Rowing With More Intensity.mp4
+models/__pycache__/__init__.cpython-310.pyc
+models/__pycache__/common.cpython-310.pyc
+models/__pycache__/experimental.cpython-310.pyc
+models/__pycache__/yolo.cpython-310.pyc
+processed_videos/Rowing With More Intensity_keypoint.mp4
+processed_videos/test2_keypoint.mp4
+utils/__pycache__/__init__.cpython-310.pyc
+utils/__pycache__/autoanchor.cpython-310.pyc
+utils/__pycache__/datasets.cpython-310.pyc
+utils/__pycache__/general.cpython-310.pyc
+utils/__pycache__/google_utils.cpython-310.pyc
+utils/__pycache__/loss.cpython-310.pyc
+utils/__pycache__/metrics.cpython-310.pyc
+utils/__pycache__/plots.cpython-310.pyc
+utils/__pycache__/torch_utils.cpython-310.pyc
+cuda-keyring_1.1-1_all.deb

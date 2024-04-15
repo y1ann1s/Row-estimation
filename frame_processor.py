@@ -75,29 +75,29 @@ def process_frame(image, model, device, stride, names, hide_labels, hide_conf, l
                 right_ankle = (kpts[right_ankle_index], kpts[right_ankle_index + 1])
 
                 # Calculate the angle at the right knee
-                angle_right_knee = calculate_angle(right_hip, right_knee, right_ankle)
-                angle_label = f"Right Knee: {int(angle_right_knee)}°"
-                cv2.putText(im0, angle_label, (int(right_knee[0]), int(right_knee[1] - 10)), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
+#                angle_right_knee = calculate_angle(right_hip, right_knee, right_ankle)
+#                angle_label = f"Right Knee: {int(angle_right_knee)}°"
+#                cv2.putText(im0, angle_label, (int(right_knee[0]), int(right_knee[1] - 10)), 
+#                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
 #Wrist pose
     
-    for i, pose in enumerate(output_data):  # Detections per image
-        if len(pose):
-            # Extract right wrist position
-            right_wrist_pos = pose[:, right_wrist_index:right_wrist_index+2]
-            if right_wrist_pos.nelement() > 0:
-                right_wrist_y = right_wrist_pos[0][1].item()  # Get the Y position
-
-                # Detect phase transitions based on wrist movement
-                if config.prev_wrist_y is not None:
-                    if right_wrist_y < config.prev_wrist_y:
-                        # Wrist moving upwards - potentially entering the Drive phase
-                        cv2.putText(im0, "Entering Drive", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-                    elif right_wrist_y > config.prev_wrist_y:
-                        # Wrist moving downwards - potentially entering the Recovery phase
-                        cv2.putText(im0, "Entering Recovery", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                
-                config.prev_wrist_y = right_wrist_y  # Update the tracked wrist position for the next frame
+#    for i, pose in enumerate(output_data):  # Detections per image
+#        if len(pose):
+#            # Extract right wrist position
+#            right_wrist_pos = pose[:, right_wrist_index:right_wrist_index+2]
+#            if right_wrist_pos.nelement() > 0:
+#                right_wrist_y = right_wrist_pos[0][1].item()  # Get the Y position#
+#
+#                # Detect phase transitions based on wrist movement
+#                if config.prev_wrist_y is not None:
+#                    if right_wrist_y < config.prev_wrist_y:
+#                        # Wrist moving upwards - potentially entering the Drive phase
+#                        cv2.putText(im0, "Entering Drive", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+#                    elif right_wrist_y > config.prev_wrist_y:
+#                        # Wrist moving downwards - potentially entering the Recovery phase
+#                        cv2.putText(im0, "Entering Recovery", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+#                
+#                config.prev_wrist_y = right_wrist_y  # Update the tracked wrist position for the next frame
 
 
 
