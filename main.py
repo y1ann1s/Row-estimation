@@ -19,8 +19,8 @@ def main() -> None:
     application.add_error_handler(error_handler)
 
     # Run the Flask app on a different thread
-    flask_thread = Thread(target=run_app)
-    flask_thread.start()
+    #flask_thread = Thread(target=run_app)
+    #flask_thread.start()
 
     # Run Telegram Bot
     application.run_polling()
