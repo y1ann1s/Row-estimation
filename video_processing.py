@@ -108,4 +108,4 @@ def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose
 
 if __name__ == "__main__":
     # Example usage
-    process_video_analysis(source="test2.mp4", poseweights="yolov7-w6-pose.pt", device='cpu', view_img=True)
+    process_video_analysis(source="test2.mp4", poseweights="yolov7-w6-pose.pt", device='gpu', view_img=False)
