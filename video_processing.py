@@ -90,7 +90,7 @@ def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose
             break
         frame_count = int(cap.get(cv2.CAP_PROP_POS_FRAMES))  # Current frame position
         if frame_count % frame_skip_interval == 0:
-            processed_frame = process_frame(frame, model, device, stride, names, hide_labels, hide_conf, line_thickness)
+            processed_frame = process_frame(frame, model, device, names, hide_labels, hide_conf)      
             if view_img:
                 cv2.imshow('Processed Frame', processed_frame)
                 if cv2.waitKey(1) == ord('q'):
@@ -113,4 +113,4 @@ def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose
 
 if __name__ == "__main__":
     # Example usage
-    process_video_analysis(source="test2.mp4", poseweights="yolov7-w6-pose.pt", device='gpu', view_img=False)
+    process_video_analysis(source="test2.mp4", poseweights="yolov7-w6-pose.pt", device='gpu', view_img=False,target_fps=3)

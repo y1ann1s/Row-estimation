@@ -45,7 +45,7 @@ async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         video_file = await context.bot.get_file(message.video.file_id)
         download_folder=f"{config.storage_root}/downloaded_video"
         Path(download_folder).mkdir(parents=True, exist_ok=True)
-        video_file_path = f"{download_folder}/{message.from_user}_{message.video.file_id}.{message.video.file_name.split('.')[-1]}"   # Define file path
+        video_file_path = f"{download_folder}/{message.from_user}_{message.video.file_id}.{message.video.mime_type.split('/')[-1]}"   # Define file path
         await video_file.download_to_drive(video_file_path)
         logger.info(f"Video file downloaded: {video_file_path}")
         await message.reply_text("Processing your video, please wait...")
@@ -56,7 +56,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = await context.bot.get_file(message.document.file_id)
     download_folder=f"{config.storage_root}/downloaded_csv"
     Path(download_folder).mkdir(parents=True, exist_ok=True)
-    file_path = f"{download_folder}/{message.from_user}_{message.document.file_id}.{message.document.file_name.split('.')[-1]}"  # Preserves original file extension
+    file_path = f"{download_folder}/{message.from_user}_{message.document.file_id}.{message.document.mime_type.split('/')[-1]}"  # Preserves original file extension
        
     await file.download_to_drive(file_path)
     logger.info(f"File downloaded: {file_path}")
