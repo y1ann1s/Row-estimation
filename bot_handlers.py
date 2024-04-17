@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 from video_processing import download_youtube_video, process_video_analysis, download_video_from_url
 from openai_chat import ask_chatgpt
 import logging
+from pathlib import Path
+import config
 
 logger = logging.getLogger(__name__)
 URL_REGEX = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
@@ -29,28 +31,50 @@ async def process_csv_and_respond(file_path, update, context):
         df = pd.read_csv(file_path)
         csv_content = df.to_string()
         chat_history = context.chat_data.get('chat_history', [])
-        
         response, updated_history = ask_chatgpt(csv_content, chat_history)
         context.chat_data['chat_history'] = updated_history
-        
         await update.message.reply_text("Here's the analysis of your CSV file:")
         await update.message.reply_text(response)
     except Exception as e:
         logger.error(f"Error processing CSV file: {e}")
         await update.message.reply_text("Failed to process the CSV file. Please try again later.")
+        
+async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if message.video:
+        video_file = await context.bot.get_file(message.video.file_id)
+        download_folder=f"{config.storage_root}/downloaded_video"
+        Path(download_folder).mkdir(parents=True, exist_ok=True)
+        video_file_path = f"{download_folder}/{message.from_user}_{message.video.file_id}.{message.video.file_name.split('.')[-1]}"   # Define file path
+        await video_file.download_to_drive(video_file_path)
+        logger.info(f"Video file downloaded: {video_file_path}")
+        await message.reply_text("Processing your video, please wait...")
+        await process_video_and_respond(video_file_path, update, context)
+
+async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message
+    file = await context.bot.get_file(message.document.file_id)
+    download_folder=f"{config.storage_root}/downloaded_csv"
+    Path(download_folder).mkdir(parents=True, exist_ok=True)
+    file_path = f"{download_folder}/{message.from_user}_{message.document.file_id}.{message.document.file_name.split('.')[-1]}"  # Preserves original file extension
+       
+    await file.download_to_drive(file_path)
+    logger.info(f"File downloaded: {file_path}")
+
+    if message.document.mime_type == 'text/csv':
+        await update.message.reply_text("Processing your CSV file, please wait...")
+        await process_csv_and_respond(file_path, update, context)
+    elif "video" in message.document.mime_type:  # Handles video files
+        await update.message.reply_text("Processing your video, please wait...")
+        await process_video_and_respond(file_path, update, context)
+    else:
+        await update.message.reply_text("Unsupported file type.")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
     if message.document:
-        if message.document.mime_type == 'text/csv':
-            file = await context.bot.get_file(message.document.file_id)
-            file_path = f"{message.document.file_id}.csv"
-            await file.download(file_path)
-            logger.info(f"CSV file downloaded: {file_path}")
-            await message.reply_text("Processing your CSV file, please wait...")
-            await process_csv_and_respond(file_path, update, context)
-            return
-    if message.text:
+        await handle_file(update, context)
+    elif message.text:
         urls = re.findall(URL_REGEX, message.text)
         if not urls:
             chat_history = context.chat_data.get('chat_history', [])
@@ -69,20 +93,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 return
             else:
                 await message.reply_text("Failed to download the video. Please check the URL and try again.")
-    else:
-        await message.reply_text("Please send a video URL to analyze or ask a question about rowing.")
-
-async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message = update.message
-    if message.video:
-        video_file = await context.bot.get_file(message.video.file_id)
-        video_file_path = f"{message.video.file_id}.mp4"
-        await video_file.download(video_file_path)
-        logger.info(f"Video file downloaded: {video_file_path}")
-        await message.reply_text("Processing your video, please wait...")
-        await process_video_and_respond(video_file_path, update, context)
-    elif message.document and message.document.mime_type == 'text/csv':
-        await handle_message(update, context)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text('Hi! I am your rowing coach. Send me a video URL to start the analysis or ask me anything about rowing!')

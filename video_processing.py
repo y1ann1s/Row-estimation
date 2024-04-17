@@ -22,7 +22,7 @@ import config
 
 # Assuming utils.py and necessary model files are correctly set up in your project directory
 
-def download_youtube_video(url, download_folder="downloaded_videos"):
+def download_youtube_video(url, download_folder="{config.storage_root}/downloaded_videos"):
     Path(download_folder).mkdir(parents=True, exist_ok=True)
     yt = YouTube(url)
     stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
@@ -58,7 +58,7 @@ def download_video_from_url(url, download_folder="downloaded_videos"):
         return None
 
 @torch.no_grad()
-def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose.pt", device='cpu', view_img=False, target_fps=1, save_conf=False, line_thickness=3, hide_labels=False, hide_conf=True, output_dir="processed_videos"):
+def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose.pt", device='cpu', view_img=False, target_fps=1, save_conf=False, line_thickness=3, hide_labels=False, hide_conf=True):
     #device = select_device(device)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     half = device.type != 'cpu'
@@ -76,7 +76,7 @@ def process_video_analysis(source="input_video.mp4", poseweights="yolov7-w6-pose
 
     source_fps = cap.get(cv2.CAP_PROP_FPS)
     frame_skip_interval = int(np.round(source_fps / target_fps))
-
+    output_dir= f"{config.storage_root}/processed_videos"
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     output_video_path = Path(output_dir) / f"{Path(source).stem}_keypoint.mp4"
     vid_write_image = letterbox(cap.read()[1], stride=64, auto=True)[0]  # Init VideoWriter
